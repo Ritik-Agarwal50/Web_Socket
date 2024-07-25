@@ -35,6 +35,8 @@ func (m *Manager) serveWS(w http.ResponseWriter, r *http.Request) {
 	}
 	client := NewClient(conn, m)
 	m.addClient(client)
+	go client.writeMessages()
+	go client.readMessages()
 }
 
 func (m *Manager) addClient(client *Client) {
@@ -47,8 +49,52 @@ func (m *Manager) addClient(client *Client) {
 func (m *Manager) removeClient(client *Client) {
 	m.Lock()
 	defer m.Unlock()
-	if _,ok :=m.clients[client]; ok {
+	if _, ok := m.clients[client]; ok {
 		client.connection.Close()
 		delete(m.clients, client)
+	}
+}
+
+func (c *Client) readMessages() {
+	defer func() {
+		c.manager.removeClient(c)
+	}()
+
+	for {
+		messageType, payload, err := c.connection.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("error: %v", err)
+			}
+			break
+		}
+		log.Println("Message Type: ", messageType)
+		log.Println("Payload", string(payload))
+
+		for wsclient := range c.manager.clients {
+			wsclient.egress <- payload
+		}
+	}
+}
+
+func (c *Client) writeMessages() {
+	defer func() {
+		c.manager.removeClient(c)
+	}()
+
+	for {
+		select {
+		case message, ok := <-c.egress:
+			if !ok {
+				if err := c.connection.WriteMessage(websocket.CloseMessage, nil); err != nil {
+					log.Println("connection closed: ", err)
+				}
+				return
+			}
+			if err := c.connection.WriteMessage(websocket.TextMessage, message); err != nil {
+				log.Println(err)
+			}
+			log.Println("sent message")
+		}
 	}
 }
