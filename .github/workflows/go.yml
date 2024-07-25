@@ -34,7 +34,7 @@ jobs:
     - name: Build frontend
       run: |
         cd frontend
-    # npm run build
+        npm run build
 
     # Set up Go for the backend
     - name: Set up Go
@@ -66,3 +66,26 @@ jobs:
         cd backend
         go install golang.org/x/lint/golint@latest
         golint ./...
+
+    # Diagnostic steps
+    - name: Check disk space
+      run: df -h
+
+    - name: Check Node.js version
+      run: node -v
+
+    - name: Check npm version
+      run: npm -v
+
+    - name: Check Go version
+      run: go version
+
+    - name: List frontend directory
+      run: |
+        cd frontend
+        ls -la
+
+    - name: List backend directory
+      run: |
+        cd backend
+        ls -la
