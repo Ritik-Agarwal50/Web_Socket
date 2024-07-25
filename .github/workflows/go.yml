@@ -26,7 +26,7 @@ jobs:
     # Install backend dependencies
     - name: Install backend dependencies
       run: |
-        go mod download
+        go mod tidy
         go build -v ./...
         go test -v ./...
 
