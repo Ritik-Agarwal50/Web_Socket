@@ -33,7 +33,6 @@ jobs:
     # Lint Go code
     - name: Lint Go code
       run: |
-        cd backend
         go install golang.org/x/lint/golint@latest
         golint ./...
 
@@ -45,5 +44,4 @@ jobs:
 
     - name: List backend directory
       run: |
-        cd backend
         ls -la
