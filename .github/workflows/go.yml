@@ -26,19 +26,8 @@ jobs:
     # Install backend dependencies
     - name: Install backend dependencies
       run: |
-        cd backend
         go mod download
-
-    # Build backend
-    - name: Build backend
-      run: |
-        cd backend
         go build -v ./...
-
-    # Run backend tests
-    - name: Test backend
-      run: |
-        cd backend
         go test -v ./...
 
     # Lint Go code
