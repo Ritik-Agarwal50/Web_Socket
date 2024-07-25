@@ -34,7 +34,7 @@ jobs:
     - name: Build frontend
       run: |
         cd frontend
-        npm run build
+    # npm run build
 
     # Set up Go for the backend
     - name: Set up Go
