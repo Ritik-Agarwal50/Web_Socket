@@ -81,46 +81,46 @@ func (m *Manager) removeClient(client *Client) {
 	}
 }
 
-func (c *Client) readMessages() {
-	defer func() {
-		c.manager.removeClient(c)
-	}()
+// func (c *Client) readMessages() {
+// 	defer func() {
+// 		c.manager.removeClient(c)
+// 	}()
 
-	for {
-		messageType, payload, err := c.connection.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
-			}
-			break
-		}
-		log.Println("Message Type: ", messageType)
-		log.Println("Payload", string(payload))
+// 	for {
+// 		messageType, payload, err := c.connection.ReadMessage()
+// 		if err != nil {
+// 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+// 				log.Printf("error: %v", err)
+// 			}
+// 			break
+// 		}
+// 		log.Println("Message Type: ", messageType)
+// 		log.Println("Payload", string(payload))
 
-		for wsclient := range c.manager.clients {
-			wsclient.egress <- payload
-		}
-	}
-}
+// 		for wsclient := range c.manager.clients {
+// 			wsclient.egress <- payload
+// 		}
+// 	}
+// }
 
-func (c *Client) writeMessages() {
-	defer func() {
-		c.manager.removeClient(c)
-	}()
+// func (c *Client) WriteMessages() {
+// 	defer func() {
+// 		c.manager.removeClient(c)
+// 	}()
 
-	for {
-		select {
-		case message, ok := <-c.egress:
-			if !ok {
-				if err := c.connection.WriteMessage(websocket.CloseMessage, nil); err != nil {
-					log.Println("connection closed: ", err)
-				}
-				return
-			}
-			if err := c.connection.WriteMessage(websocket.TextMessage, message); err != nil {
-				log.Println(err)
-			}
-			log.Println("sent message")
-		}
-	}
-}
+// 	for {
+// 		select {
+// 		case message, ok := <-c.egress:
+// 			if !ok {
+// 				if err := c.connection.WriteMessage(websocket.CloseMessage, nil); err != nil {
+// 					log.Println("connection closed: ", err)
+// 				}
+// 				return
+// 			}
+// 			if err := c.connection.WriteMessage(websocket.TextMessage,message); err != nil {
+// 				log.Println(err)
+// 			}
+// 			log.Println("sent message")
+// 		}
+// 	}
+// }
