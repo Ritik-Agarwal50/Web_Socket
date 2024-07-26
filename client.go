@@ -41,17 +41,17 @@ func (c *Client) readMessages() {
 
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway) {
-				log.Println("error: %v", err)
+				log.Println("error: ", err)
 			}
 			break
 		}
 		var request Event
 		if err := json.Unmarshal(payload, &request); err != nil {
-			log.Println("error in marhsalling: %v", err)
+			log.Println("error in marhsalling: ", err)
 			break
 		}
 		if err := c.manager.routeEvent(request, c); err != nil {
-			log.Println("error in routing event: %v", err)
+			log.Println("error in routing event: ", err)
 		}
 	}
 }
@@ -72,7 +72,7 @@ func (c *Client) writeMessages() {
 		case message, ok := <-c.egress:
 			if !ok {
 				if err := c.connection.WriteMessage(websocket.CloseMessage, nil); err != nil {
-					log.Println("connection is closed or blocked: %v", err)
+					log.Println("connection is closed or blocked: ", err)
 				}
 				return
 			}
