@@ -11,6 +11,7 @@
     <div class="center">
       <h1>Chat Room</h1>
       <h4 id="chat-header">Currently in chat app</h4>
+      <h3 id="connection-header">Connected to websocket: false</h3>
 
       <form id="chatroom-select">
         <label for="chatroom">Select a chatroom:</label>
@@ -23,6 +24,7 @@
 
       <textarea
         class="messagearea"
+        id="chatmessages"
         readonly
         name="chatmessages"
         rows="4"
@@ -35,6 +37,15 @@
         <input type="text" id="message" name="message" /><br />
         <input type="submit" value="Send message" /><br />
       </form>
+      <div style="border: 3px solid black; margin-top: 30px">
+        <form id="login-form">
+          <label for="username">username:</label>
+          <input type="text" id="username" name="username" /><br />
+          <label for="password">password:</label>
+          <input type="password" id="password" name="password" /><br /><br />
+          <input type="submit" value="Login" />
+        </form>
+      </div>
     </div>
 
     <script>
@@ -42,6 +53,54 @@
         constructor(type, payload) {
           this.type = type;
           this.payload = payload;
+        }
+      }
+
+      function login() {
+        let formData = {
+          username: document.getElementById("username").value,
+          password: document.getElementById("password").value,
+        };
+        fetch("login", {
+          method: "post",
+          body: JSON.stringify(formData),
+          mode: "cors",
+        })
+          .then((response) => {
+            if (response.ok) {
+              return response.json();
+            } else {
+              throw "unauthorized";
+            }
+          })
+          .then((data) => {
+            connectWebsocket(data.otp);
+          })
+          .catch((e) => {
+            alert(e);
+          });
+      }
+
+      function connectWebsocket(otp) {
+        if (window["WebSocket"]) {
+          console.log("WebSocket is supported by your browser!");
+
+          conn = new WebSocket(
+            "ws://" + document.location.host + "/ws?otp=" + otp
+          );
+
+          conn.onopen = function (evt) {
+            document.getElementById("connection-header").innerText =
+              "Connected to websocket: true";
+          };
+          conn.onmessage = function (evt) {
+            console.log(evt);
+            const eventData = JSON.parse(evt.data);
+            const event = Object.assign(new Event(), eventData);
+            routeEvent(event);
+          };
+        } else {
+          alert("Websocket is not supported by your browser");
         }
       }
 
@@ -84,20 +143,20 @@
       window.onload = function () {
         document.getElementById("chatroom-select").submit = changeChatRoom;
         document.getElementById("chatroom-message").submit = sendMessage;
-
-        if (window["WebSocket"]) {
-          console.log("WebSocket is supported by your browser!");
-          // connect to the websocket server
-          conn = new WebSocket("ws://" + document.location.host + "/ws");
-          conn.onmessage = function (evt) {
-            console.log(evt.data);
-            const eventData = JSON.parse(evt.data);
-            const event = Object.assign(new Event(), eventData);
-            routeEvent(event);
-          };
-        } else {
-          console.log("WebSocket is not supported by your browser!");
-        }
+        document.getElementById("login-form").submit = login;
+        // if (window["WebSocket"]) {
+        //   console.log("WebSocket is supported by your browser!");
+        //   // connect to the websocket server
+        //   conn = new WebSocket("ws://" + document.location.host + "/ws");
+        //   conn.onmessage = function (evt) {
+        //     console.log(evt.data);
+        //     const eventData = JSON.parse(evt.data);
+        //     const event = Object.assign(new Event(), eventData);`
+        //     routeEvent(event);
+        //   };
+        // } else {
+        //   console.log("WebSocket is not supported by your browser!");
+        // }
       };
     </script>
   </body>
