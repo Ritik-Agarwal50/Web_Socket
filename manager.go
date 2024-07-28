@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
+	"encoding/json"
 	"github.com/gorilla/websocket"
 )
 
@@ -58,6 +58,16 @@ func (m *Manager) routeEvent(event Event, c *Client) error {
 }
 
 func (m *Manager) serveWS(w http.ResponseWriter, r *http.Request) {
+	otp := r.URL.Query().Get("otp")
+	if otp == ""{
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	if !m.otps.VerifyOTP(otp){
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	
 	log.Println("New Connection")
 	conn, err := websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -137,5 +147,39 @@ func checkOrigin(r *http.Request) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (m *Manager) loginHandler(w http.ResponseWriter, r *http.Request){
+	type userLoginRequest struct {
+		Username string `json: "username"`
+		Password string `json: "password"`
+	}
+
+	var req userLoginRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Username == "samm" && req.Password == "123"{
+		type response struct{
+			OTP string `json: "otp"`
+		}
+		otp := m.otps.NewOTP()
+		resp := response{
+			OTP: otp.Key,
+		}
+
+		data, err := json.Marshal(resp)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return	
 	}
 }
