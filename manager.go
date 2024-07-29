@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"sync"
 	"time"
-	"encoding/json"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -40,10 +40,8 @@ func NewManager(ctx context.Context) *Manager {
 }
 
 func (m *Manager) setupEventHandlers() {
-	m.handlers[EventSendMessage] = func(e Event, c *Client) error {
-		fmt.Println(e)
-		return nil
-	}
+	m.handlers[EventSendMessage] = SendMessageHandler
+	m.handlers[EventChangeRoom] = ChatRoomHandler
 }
 
 func (m *Manager) routeEvent(event Event, c *Client) error {
@@ -59,15 +57,15 @@ func (m *Manager) routeEvent(event Event, c *Client) error {
 
 func (m *Manager) serveWS(w http.ResponseWriter, r *http.Request) {
 	otp := r.URL.Query().Get("otp")
-	if otp == ""{
+	if otp == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	if !m.otps.VerifyOTP(otp){
+	if !m.otps.VerifyOTP(otp) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	
+
 	log.Println("New Connection")
 	conn, err := websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -143,14 +141,14 @@ func (m *Manager) removeClient(client *Client) {
 func checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	switch origin {
-	case "http://localhost:8080":
+	case "https://localhost:8080":
 		return true
 	default:
 		return false
 	}
 }
 
-func (m *Manager) loginHandler(w http.ResponseWriter, r *http.Request){
+func (m *Manager) loginHandler(w http.ResponseWriter, r *http.Request) {
 	type userLoginRequest struct {
 		Username string `json: "username"`
 		Password string `json: "password"`
@@ -164,8 +162,8 @@ func (m *Manager) loginHandler(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	if req.Username == "samm" && req.Password == "123"{
-		type response struct{
+	if req.Username == "samm" && req.Password == "123" {
+		type response struct {
 			OTP string `json: "otp"`
 		}
 		otp := m.otps.NewOTP()
@@ -180,6 +178,6 @@ func (m *Manager) loginHandler(w http.ResponseWriter, r *http.Request){
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Write(data)
-		return	
+		return
 	}
 }

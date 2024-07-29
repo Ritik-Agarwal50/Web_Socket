@@ -1,6 +1,10 @@
 package main
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 type Event struct {
 	Type    string          `json: "type"`
@@ -11,9 +15,53 @@ type EventHandler func(event Event, c *Client) error
 
 const (
 	EventSendMessage = "send_message"
+	EventNewMessage  = "new_message"
+	EventChangeRoom  = "change_room"
 )
 
-type SendMessage struct {
+type SendMessageEvent struct {
 	Message string `json: "message"`
 	From    string `json: "from"`
+}
+
+type NewMessageEvent struct {
+	SendMessageEvent
+	Sent time.Time `json: "sent"`
+}
+type ChangeRoomEvent struct {
+	Name string `json:"name"`
+}
+
+func SendMessageHandler(event Event, c *Client) error {
+	var chatevent SendMessageEvent
+	if err := json.Unmarshal(event.Payload, &chatevent); err != nil {
+		return fmt.Errorf("failed to payload req: %v", err)
+	}
+	var broadMessage NewMessageEvent
+	broadMessage.Sent = time.Now()
+	broadMessage.Message = chatevent.Message
+	broadMessage.From = chatevent.From
+	data, err := json.Marshal(broadMessage)
+	if err != nil {
+		return fmt.Errorf("failed to marhsal message: %v", err)
+	}
+
+	var outgoingEvent Event
+	outgoingEvent.Payload = data
+	outgoingEvent.Type = EventNewMessage
+	for client := range c.manager.clients {
+		if client.chatroom == c.chatroom {
+			client.egress <- outgoingEvent
+		}
+	}
+	return nil
+}
+
+func ChatRoomHandler(event Event, c *Client) error {
+	var changeRoomEvent ChangeRoomEvent
+	if err := json.Unmarshal(event.Payload, &changeRoomEvent); err != nil {
+		return fmt.Errorf("bad payload in request: %v", err)
+	}
+	c.chatroom = changeRoomEvent.Name
+	return nil
 }

@@ -55,6 +55,25 @@
           this.payload = payload;
         }
       }
+      class SendMessageEvent {
+        constructor(message, from) {
+          this.message = message;
+          this.from = from;
+        }
+      }
+
+      class NewMessageEvent {
+        constructor(message, from, sent) {
+          this.message = message;
+          this.from = from;
+          this.sent = sent;
+        }
+      }
+      class ChangeChatRoomEvent {
+        constructor(name) {
+          this.name = name;
+        }
+      }
 
       function login() {
         let formData = {
@@ -86,7 +105,7 @@
           console.log("WebSocket is supported by your browser!");
 
           conn = new WebSocket(
-            "ws://" + document.location.host + "/ws?otp=" + otp
+            "wss://" + document.location.host + "/ws?otp=" + otp
           );
 
           conn.onopen = function (evt) {
@@ -110,18 +129,40 @@
         }
         switch ((event, type)) {
           case "new_message":
-            console.log("new message event");
+            const messageEvent = Object.assign(
+              new NewMessageEvent(),
+              event.payload
+            );
+            appendChatMessage(messageEvent);
             break;
           default:
             console.log("unknown event type");
             break;
         }
       }
+
+      function appendChatMessage(messageEvent) {
+        var data = new Data(messageEvent.sent);
+        const formattedMessage = `${data.toLocaleString()} - ${
+          messageEvent.message
+        }`;
+        textarea = document.getElementById("chatmessages");
+        textarea.value = textarea.value.innerHTML + "\n" + formattedMessage;
+        textarea.scrollTop = textarea.scrollHeight;
+      }
       var selectChat = "general";
       function changeChatRoom() {
         var newChat = document.getElementById("chatroom").value;
         if (newChat != null && newChat.value != selectedChat) {
           console.log(newChat);
+          selectedChat = newChat.value;
+          header = document.getElementById("chat-header").innerHTML =
+            "Currently in chat app: " + selectedChat;
+
+          let changeEvent = new ChangeChatRoomEvent(selectedChat);
+          sendEvent("change_room", changeEvent);
+          textarea = document.getElementById("chatmessages");
+          textarea.innerHTML = `"you changes room :" ${selectedChat}`;
         }
         return false;
       }
@@ -129,8 +170,10 @@
       function sendMessage() {
         var newMessage = document.getElementById("message");
         if (newMessage != null) {
-          console.log(newMessage.value);
-          conn.send(newMessage.value);
+          // console.log(newMessage.value);
+          // conn.send(newMessage.value);
+          let outgoingEvent = new SendMessageEvent(newMessage.value, "samm");
+          sendEvent("send_message", outgoingEvent);
         }
         return false;
       }

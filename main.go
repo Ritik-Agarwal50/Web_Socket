@@ -23,5 +23,9 @@ func main() {
 	ctx, cancel := context.WithCancel(rootCtx)
 	defer cancel()
 	setupAPI(ctx)
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	err := http.ListenAndServeTLS(":8000", "server.crt", "server.key", nil)
+	if err != nil {
+		log.Fatal("listen and server err:", err)
+	}
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
